@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=People Tracker
+Comment=runs the main app
+Exec=lxterminal -t "COUT" -e /home/pi/people-tracker/main
+Type=Application
