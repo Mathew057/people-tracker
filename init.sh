@@ -12,8 +12,11 @@ apt-get install libxvidcore-dev libx264-dev -y
 apt-get install libgtk2.0-dev libgtk-3-dev -y
 apt-get install libcanberra-gtk* -y
 apt-get install libatlas-base-dev gfortran -y
-apt-get install git-core -y
+apt-get install libcurl-openssl-dev -y
+apt-get install motion -y
 apt-get install xrdp -y
+
+export LIBRARY_PATH=/opt/vc/lib
 
 cd /home/pi/people-tracker
 
@@ -33,3 +36,4 @@ ldconfig
 
 echo 'start_x=1' >> /boot/config.txt
 echo 'gpu_mem=128' >> /boot/config.txt
+echo 'export LIBRARY_PATH=/opt/vc/lib' >> /home/pi/.bashrc
