@@ -15,7 +15,7 @@ apt-get install libatlas-base-dev gfortran -y
 apt-get install git-core -y
 apt-get install xrdp -y
 
-cd /home/pi
+cd /home/pi/people-tracker
 
 gdrive_download 1SUyGrcwf2PMz9hjLw28FJkju7g09de1P opencv.zip
 unzip opencv.zip
@@ -23,13 +23,13 @@ unzip opencv.zip
 gdrive_download 17O4Z5oe_9k_jwMjI3cmDoKAsHzaVN-Rt raspicam.zip
 unzip raspicam.zip
 
-cd /home/pi/opencv/opencv-3.4.2/build
+cd /home/pi/people-tracker/opencv/opencv-3.4.2/build
 make install
 ldconfig
 
-cd /home/pi/raspicam/build
+cd /home/pi/people-tracker/raspicam/build
 make install
 ldconfig
 
-sed -i "s/start_x=0/start_x=1/g" /boot/config.txt
-sed -i "s/gpu_mem=.*/gpu_mem=128/g" /boot/config.txt
+echo 'start_x=1' >> /boot/config.txt
+echo 'gpu_mem=128' >> /boot/config.txt
