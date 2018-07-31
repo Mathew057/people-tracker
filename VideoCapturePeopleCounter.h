@@ -86,12 +86,21 @@ private:
     int running = 0;
     CURL *curl;
     CURLcode res;   
+    bool writingSettings = false;
+    int heightPercentage = 37;
+    int minArea = 18432;
+    int minAreaPercentage = 6;
+    int maxArea = 113664;
+    int maxAreaPercentage = 37;
+    int kernal = 5;
+    bool ending = false;
+    int refLineY;
+    int frameNumber = 0;
+    string deviceName;
+    string tid;
  
     Ptr<BackgroundSubtractor> backgroundSubtractor;
 
-    int refLineY;
-
-    int frameNumber = 0;
     map<const Person*, int> lastFrameWherePersonWasSeen;
     map<const Person*, bool > lineCrossedByPerson;
 
@@ -100,5 +109,8 @@ private:
     bool isPersonCrossingTheRefLine(const Person* person, Line line, int * direction = NULL);
  
     void processFrame(const Mat& frame);
+    
+    void asyncWriteSettings();
 
+    void readSettings();
 };

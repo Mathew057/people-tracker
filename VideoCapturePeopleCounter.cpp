@@ -1,12 +1,88 @@
 #include "VideoCapturePeopleCounter.h"
 
+#define HEIGHT 240
+#define WIDTH 320
+#define AREA 76800
+
 using namespace std::chrono;
 using namespace cv;
 using namespace std;
 
 // member methods
+int timeout = 300;
+bool settingsChanged = false;
+void refline_trackbar( int value, void* variable) {
+  timeout = 300;
+  settingsChanged = true;
+  int * returnVar = (int*)variable;
+  *returnVar = (int)((value/100.0)*HEIGHT);
+}
+
+void area_trackbar( int value, void* variable) {
+  timeout = 300;
+  settingsChanged = true;
+  int * returnVar = (int*)variable;
+  *returnVar = (int)((value/100.0)*AREA);
+}
+
+void kernal_trackbar( int, void*) {
+  timeout = 300;
+  settingsChanged = true;
+}
+
+void VideoCapturePeopleCounter::asyncWriteSettings(){
+  while(!ending) {
+    while (!writingSettings && !ending) {
+      this_thread::sleep_for(chrono::milliseconds(10));
+    }
+    cout << "Writing settings" << endl;
+    ofstream settings;
+    settings.open("settings.txt");
+    settings << tid << endl;
+    settings << deviceName << endl;
+    settings << heightPercentage << endl;
+    settings << minAreaPercentage << endl;
+    settings << maxAreaPercentage << endl;
+    settings << kernal << endl;
+    settings.close();
+    timeout = 300;
+    settingsChanged = false;
+    writingSettings = false;
+  }
+}
+
+void VideoCapturePeopleCounter::readSettings() {
+  ifstream settings;
+  settings.open("settings.txt");
+  settings >> tid;
+  settings >> deviceName;
+  settings >> heightPercentage;
+  refLineY = (int)((heightPercentage/100.0)*HEIGHT);
+  settings >> minAreaPercentage;
+  minArea = (int)((minAreaPercentage/100.0)*AREA);
+  settings >> maxAreaPercentage;
+  maxArea = (int)((maxAreaPercentage/100.0)*AREA);
+  settings >> kernal;
+  settings.close();
+}
 
 void VideoCapturePeopleCounter::start() {
+  readSettings();
+
+  refLine = Line(0, refLineY, WIDTH, refLineY);
+
+  thread writer(&VideoCapturePeopleCounter::asyncWriteSettings,this);
+
+  namedWindow("Main", 1);
+  createTrackbar("refLineY %", "Main", &heightPercentage, 100, refline_trackbar, &refLineY );
+  setTrackbarMin("refLineY %", "Main", 1);
+  createTrackbar("minArea %", "Main", &minAreaPercentage, 100, area_trackbar, &minArea );
+  setTrackbarMin("minArea %", "Main", 1);
+  createTrackbar("maxArea %", "Main", &maxAreaPercentage, 100, area_trackbar, &maxArea );
+  setTrackbarMin("maxArea %", "Main", 1);
+  createTrackbar("kernal", "Main", &kernal, 10, kernal_trackbar );
+  setTrackbarMin("kernal", "Main", 1);
+
   Mat frame, frameDst;
   raspicam::RaspiCam_Cv cap;
   cap.set(CAP_PROP_FRAME_WIDTH, 640);
@@ -15,22 +91,31 @@ void VideoCapturePeopleCounter::start() {
     cout << "could not open camera" << endl;
     return;
   }
-  while (cap.grab()) {
+  while (cap.grab() && !ending) {
+    ++frameNumber;
+    if(settingsChanged)
+      --timeout;
     cap.retrieve(frame);
     resize(frame, frameDst, Size(), 0.5, 0.5, INTER_AREA);
     frame = frameDst;
-    refLineY = 3*(frame.rows>>3);
-    if (++frameNumber == 1)
-      refLine = Line(0, refLineY, frame.cols, refLineY);
 
     // erase old contours (seen 16 frames ago)
     unregisterPersonIf([&](const Person *p) {
       return frameNumber - lastFrameWherePersonWasSeen[p] > 16;
     });
 
+    if (refLine.start.y != refLineY) {
+	refLine.start.y = refLineY;
+	refLine.end.y = refLineY;
+    }
     // and then process the current frame
     processFrame(frame);
+    
+    if(timeout < 0) {
+      writingSettings = true; 
+    }
   }
+  writer.join();
 }
 
 // To find orientation of ordered triplet (p, q, r).
@@ -126,7 +211,9 @@ void VideoCapturePeopleCounter::countIfPersonIsCrossingTheRefLine(const Person *
       peopleWhoEnteredCount++;
     if(curl && direction == LINE_DIRECTION_UP) {
       curl_easy_setopt(curl, CURLOPT_URL, "https://www.google-analytics.com/collect");
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "v=1&t=event&tid=UA-122932938-1&cid=auto&ec=Person&ea=Enter&cm1=1");
+      char payload[100];
+      sprintf(payload, "v=1&t=event&tid=%s&cid=auto&ec=Enter&ea=%s&cm1=1", tid.c_str(), deviceName.c_str());
+      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
       res = curl_easy_perform(curl);
       if(res != CURLE_OK) {
         cout << "failed " << curl_easy_strerror(res) << endl;
@@ -162,18 +249,17 @@ void VideoCapturePeopleCounter::processFrame(const Mat &frame) {
   // substract background from frame
   backgroundSubtractor->apply(frame, tempFrame);
   // morph ops
-  morphologyEx(tempFrame, tempFrame, MORPH_OPEN, getStructuringElement( MORPH_RECT, Size(5, 5), Point(-1, -1) ));
+  morphologyEx(tempFrame, tempFrame, MORPH_OPEN, getStructuringElement( MORPH_RECT, Size(kernal, kernal), Point(-1, -1) ));
 //  morphologyEx(tempFrame, tempFrame, MORPH_CLOSE, Mat(8, 8, CV_8UC1, cv::Scalar(1)));
 
   // find contours
   vector<vector<Point>> contours;
   vector<Vec4i> hierarchy;
   findContours(tempFrame, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-  int minArea = (frame.cols*frame.rows) >> 4;
   // foreach identified person contour
   for (vector<Point> contour : contours) {
     int area = contourArea(contour);
-    if (area > minArea && area < minArea*6) {
+    if (area > minArea && area < maxArea) {
       Person *person = registerPerson(contour);
 
       Rect bound = boundingRect(contour);
@@ -190,8 +276,13 @@ void VideoCapturePeopleCounter::processFrame(const Mat &frame) {
   line(frame, Point(0, refLine.end.y), Point(frame.cols, refLine.end.y), Scalar(255, 0, 0), 2);
   putText(frame, "Count: " + to_string(peopleWhoEnteredCount), Point(10, 20), FONT_HERSHEY_COMPLEX_SMALL, 0.75, Scalar(255,0,0));
   putText(frame, "FPS: " + to_string((int)fps), Point(10,36), FONT_HERSHEY_COMPLEX_SMALL, 0.75, Scalar(0,255,0));
-  imshow("test", frame);
-  imshow("test2", tempFrame);
-  waitKey(1);
+  Mat output;
+  cvtColor(tempFrame, output, COLOR_GRAY2BGR);
+  vconcat(frame, output, tempFrame);
+  imshow("Main", tempFrame);
+  int key = waitKey(1);
+  if (key == 27) {
+    ending = true;
+  }
 }
 
