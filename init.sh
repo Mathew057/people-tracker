@@ -15,6 +15,7 @@ apt-get install libatlas-base-dev gfortran -y
 apt-get install libcurl-openssl-dev -y
 apt-get install motion -y
 apt-get install xrdp -y
+apt-get install weavedconnectd -y
 
 export LIBRARY_PATH=/opt/vc/lib
 
@@ -34,6 +35,23 @@ cd /home/pi/people-tracker/raspicam/build
 make install
 ldconfig
 
-echo 'start_x=1' >> /boot/config.txt
-echo 'gpu_mem=128' >> /boot/config.txt
 echo 'export LIBRARY_PATH=/opt/vc/lib' >> /home/pi/.bashrc
+
+raspi-config nonint do_camera 0
+raspi-config nonint do_vnc 0
+
+mkdir /home/pi/.config/autostart
+cp tracker.desktop /home/pi/.config/autostart
+
+sed -i "s/<USER_NAME>/$USER_NAME/g" keys.txt
+sed -i "s/<PASSWORD>/$PASSWORD/g" keys.txt
+sed -i "s/<DEVICE_NAME>/$DEVICE_NAME/g" keys.txt
+
+echo "$PASSWORD" > passwd.txt
+echo "$PASSWORD" >> passwd.txt
+
+weavedinstaller < keys.txt
+echo 'Authentication=VncAuth' /root/.vnc/config.d/vncserver-x11
+
+vncpasswd -service < passwd.txt
+rm passwd.txt
