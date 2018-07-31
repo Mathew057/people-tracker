@@ -42,8 +42,8 @@ raspi-config nonint do_camera 0
 raspi-config nonint do_vnc 0
 
 mkdir /home/pi/.config/autostart
-cp /home/pi/people-tracker/tracker.desktop /home/pi/.config/autostart
-cp /home/pi/people-tracker/tracker.desktop /home/pi/Desktop
+cp /home/pi/people-tracker/tracker.desktop /home/pi/.config/autostart/
+cp /home/pi/people-tracker/tracker.desktop /home/pi/Desktop/
 
 sed -i "s/<USER_NAME>/$USER_NAME/g" /home/pi/people-tracker/keys.txt
 sed -i "s/<PASSWORD>/$PASSWORD/g" /home/pi/people-tracker/keys.txt
@@ -53,7 +53,7 @@ echo "$PASSWORD" > /home/pi/people-tracker/passwd.txt
 echo "$PASSWORD" >> /home/pi/people-tracker/passwd.txt
 
 weavedinstaller < /home/pi/people-tracker/keys.txt
-echo 'Authentication=VncAuth' /root/.vnc/config.d/vncserver-x11
+echo 'Authentication=VncAuth' >> /root/.vnc/config.d/vncserver-x11
 
 vncpasswd -service < /home/pi/people-tracker/passwd.txt
 rm /home/pi/people-tracker/passwd.txt
