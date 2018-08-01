@@ -40,12 +40,7 @@ echo 'export LIBRARY_PATH=/opt/vc/lib' >> /home/pi/.bashrc
 raspi-config nonint do_camera 0
 raspi-config nonint do_vnc 0
 
-mkdir /home/pi/.config
-mkdir /home/pi/.config/autostart
-cp /home/pi/people-tracker/tracker.desktop /home/pi/.config/autostart/
-
-mkdir /home/pi/Desktop
-cp /home/pi/people-tracker/tracker.desktop /home/pi/Desktop/
+cp /home/pi/people-tracker/tracker.desktop /etc/xdg/autostart/
 
 sed -i "s/<USER_NAME>/$USER_NAME/g" /home/pi/people-tracker/keys.txt
 sed -i "s/<PASSWORD>/$PASSWORD/g" /home/pi/people-tracker/keys.txt
