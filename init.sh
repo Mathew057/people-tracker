@@ -62,3 +62,7 @@ echo 'Authentication=VncAuth' >> /root/.vnc/config.d/vncserver-x11
 
 vncpasswd -service < /home/pi/people-tracker/passwd.txt
 rm /home/pi/people-tracker/passwd.txt
+
+echo 'max_usb_current=1' >> /boot/config.txt
+apt-get install usb-modeswitch usb-modeswitch-data -y
+echo 'ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="12d1", ATTRS{idProduct}=="1f01", RUN+="/usr/sbin/usb_modeswitch -v 0x12d1 -p 0x1f01 -V 0x12d1 -P 0x1405 -J"' > /etc/udev/rules.d/70-usb-modeswitch.rules
