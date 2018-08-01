@@ -110,9 +110,9 @@ void VideoCapturePeopleCounter::start() {
     }
     // and then process the current frame
     processFrame(frame);
-    
+
     if(timeout < 0) {
-      writingSettings = true; 
+      writingSettings = true;
     }
   }
   writer.join();
@@ -181,10 +181,10 @@ bool VideoCapturePeopleCounter::intersect(Point p1, Point q1, Point p2,
 Person * VideoCapturePeopleCounter::registerPerson(const vector<Point> &contour) {
   time_p now = high_resolution_clock::now();
   Person* person = NULL;
-    
+
   for (set<Person*>::iterator it = people.begin(); it != people.end(); ++it) {
     if ((*it)->hasSimilarContour(contour)) {
-      person = *it; 
+      person = *it;
       person->lastSeen = now;
       person->update(contour);
       countIfPersonIsCrossingTheRefLine(person);
@@ -205,14 +205,14 @@ Person * VideoCapturePeopleCounter::registerPerson(const vector<Point> &contour)
 
 void VideoCapturePeopleCounter::countIfPersonIsCrossingTheRefLine(const Person *person) {
   int direction;
-  
+
   if (isPersonCrossingTheRefLine(person, refLine, &direction)) {
     if (direction == LINE_DIRECTION_UP)
       peopleWhoEnteredCount++;
     if(curl && direction == LINE_DIRECTION_UP) {
       curl_easy_setopt(curl, CURLOPT_URL, "https://www.google-analytics.com/collect");
       char payload[100];
-      sprintf(payload, "v=1&t=event&tid=%s&cid=auto&ec=Enter&ea=%s&cm1=1", tid.c_str(), deviceName.c_str());
+      sprintf(payload, "v=1&t=event&tid=%s&cid=auto&ec=%s&ea=Enter&cm1=1", tid.c_str(), deviceName.c_str());
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
       res = curl_easy_perform(curl);
       if(res != CURLE_OK) {
@@ -222,7 +222,7 @@ void VideoCapturePeopleCounter::countIfPersonIsCrossingTheRefLine(const Person *
   }
 }
 
-bool VideoCapturePeopleCounter::isPersonCrossingTheRefLine(const Person *person, Line line, int * direction) 
+bool VideoCapturePeopleCounter::isPersonCrossingTheRefLine(const Person *person, Line line, int * direction)
 {
   // if we've already reported it no need to do it again
   if (lineCrossedByPerson[person])
@@ -285,4 +285,3 @@ void VideoCapturePeopleCounter::processFrame(const Mat &frame) {
     ending = true;
   }
 }
-
